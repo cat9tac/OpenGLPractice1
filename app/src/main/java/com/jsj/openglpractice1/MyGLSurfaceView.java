@@ -5,6 +5,7 @@ import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.SystemClock;
+import android.view.MotionEvent;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -20,7 +21,9 @@ class MyGLSurfaceView extends GLSurfaceView {
 
     private float[] mRotationMatrix = new float[16];
 
-
+    private final float TOUCH_SCALE_FACTOR = 180.f/320;
+    private float mPreviewX;
+    private float mPreviewY;
 
     public MyGLSurfaceView(Context context) {
         super(context);
@@ -31,9 +34,54 @@ class MyGLSurfaceView extends GLSurfaceView {
         setRenderer(mRenderer);
         // Render the view only when there is a change in the drawing data
         //setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
+        //Render the view only when there is a change in the drawing data
+        setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        //MotionEvent reports input details from the touch screen
+        //and other input controls. In this case ,you are only
+        //interested in events where the touch osition changed
+
+        float x = event.getX();
+        float y = event.getY();
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_MOVE:
+                float dx = x - mPreviewX;
+                float dy = y - mPreviewY;
+
+                //reverse direction of rotation above the mid-line
+                if(y < getHeight() / 2){
+                    dx = dx * -1;
+                }
+
+                //reverse direction of rotation to left of the mid-line
+                if(x < getWidth() / 2) {
+                   dy = dy * -1;
+                }
+
+                mRenderer.setmAngle(mRenderer.getmAngle() +
+                        ((dx + dy) * TOUCH_SCALE_FACTOR));
+                requestRender();
+        }
+
+        mPreviewX = x;
+        mPreviewY = y;
+        return true;
     }
 
     private class MyGLRenderder implements GLSurfaceView.Renderer {
+        public volatile float mAngle;
+
+        public float getmAngle() {
+            return mAngle;
+        }
+
+        public void setmAngle(float mAngle) {
+            this.mAngle = mAngle;
+        }
+
         @Override
         public void onSurfaceCreated(GL10 gl, EGLConfig config) {
             // initialize a trangle;
@@ -87,8 +135,9 @@ class MyGLSurfaceView extends GLSurfaceView {
             // mTriangle.draw(mMVPMatrix);
             //Draw triangle3
             mTriangle.draw(scratch);
-
         }
+
+
     }
 
     public static int loadShader( int type, String shaderCode){
